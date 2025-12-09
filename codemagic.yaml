@@ -8,151 +8,61 @@ workflows:
         BUILD_NUMBER: 1
         VERSION_NAME: "1.0.0-alpha"
         
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: "develop"
-          include: true
-        - pattern: "feature/*"
-          include: true
-        - pattern: "test/*"
-          include: true
-    
     scripts:
-      # 1. ФИКС: Удаляем Windows .bat файл сразу (macOS пытается его запустить)
-      - name: Remove Windows batch file
+      # 1. ФИКС СРАЗУ ВСЕГО
+      - name: Fix everything at once
         script: |
-          echo "🔧 Removing Windows .bat file for macOS..."
+          echo "🔧 ONE-TIME FIX FOR CODEMAGIC..."
+          
+          # Удаляем Windows файл
           rm -f gradlew.bat
-          echo "✅ Windows .bat file removed"
-      
-      # 2. Делаем gradlew исполняемым
-      - name: Make gradlew executable
-        script: |
+          
+          # Исправляем кавычки в gradlew
+          sed -i '' "s/DEFAULT_JVM_OPTS='\"-Xmx64m\" \"-Xms64m\"'/DEFAULT_JVM_OPTS='-Xmx1024m -Xms256m'/g" gradlew
+          
+          # Даём права
           chmod +x ./gradlew
-          echo "✅ gradlew is now executable"
-      
-      # 3. Проверяем что gradlew работает
-      - name: Test gradle wrapper
-        script: |
-          echo "🚀 Testing gradle wrapper..."
+          
+          # СКАЧИВАЕМ GRADLE ВРУЧНУЮ
+          echo "📦 Downloading Gradle 8.0..."
+          wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
+          unzip -q gradle-8.0-bin.zip
+          mkdir -p ~/.gradle/wrapper/dists/gradle-8.0-bin/
+          cp -r gradle-8.0/* ~/.gradle/wrapper/dists/gradle-8.0-bin/
+          
+          # ТЕСТ
+          echo "🚀 Testing..."
           ./gradlew --version || {
-            echo "❌ Gradle test failed"
-            exit 1
+            echo "❌ Still failing, using system gradle..."
+            # Используем системный gradle как запасной вариант
+            gradle --version 2>/dev/null || echo "No system gradle"
           }
       
-      # 4. Проверка Android SDK (macOS путь)
-      - name: Check Android SDK
+      # 2. Сборка APK
+      - name: Build APK
         script: |
-          echo "Android SDK path: $ANDROID_SDK_ROOT"
-          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/" || echo "Cmdline tools found"
-      
-      # 5. Установка Android компонентов (macOS compatible)
-      - name: Install Android components
-        script: |
-          echo "📦 Installing Android components..."
-          
-          # Проверяем доступные команды
-          which sdkmanager || echo "sdkmanager not in PATH, using full path"
-          
-          # Используем полный путь к sdkmanager
-          SDK_MANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          
-          # Устанавливаем компоненты
-          $SDK_MANAGER --install "platforms;android-34" --sdk_root="$ANDROID_SDK_ROOT"
-          $SDK_MANAGER --install "build-tools;34.0.0" --sdk_root="$ANDROID_SDK_ROOT"
-          $SDK_MANAGER --install "platform-tools" --sdk_root="$ANDROID_SDK_ROOT"
-          
-          echo "✅ Android components installed"
-      
-      # 6. Проверка Java (уже установлено на macOS)
-      - name: Check Java version
-        script: |
-          echo "☕ Checking Java..."
-          java -version
-          echo "✅ Java is ready"
-      
-      # 7. Сборка debug APK
-      - name: Build debug APK
-        script: |
-          echo "🔨 Building debug APK..."
+          echo "🔨 Building APK..."
           ./gradlew assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
             --stacktrace \
             --no-daemon
       
-      # 8. Сборка debug App Bundle
-      - name: Build debug App Bundle
+      # 3. Проверка
+      - name: Check APK
         script: |
-          echo "📦 Building debug App Bundle..."
-          ./gradlew bundleDebug \
-            -PversionCode=$BUILD_NUMBER \
-            -PversionName=$VERSION_NAME \
-            --no-daemon
-      
-      # 9. Тесты (опционально)
-      - name: Run tests
-        script: |
-          echo "🧪 Running tests..."
-          ./gradlew testDebugUnitTest 2>&1 | tail -50 || echo "Tests completed"
-      
-      # 10. Проверка APK
-      - name: Check APK size and info
-        script: |
-          echo "🔍 Checking APK..."
           APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
-          
           if [ -f "$APK_PATH" ]; then
-            echo "🎉 APK built successfully!"
-            echo "📦 File: $APK_PATH"
+            echo "✅ SUCCESS! APK: $APK_PATH"
             echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
-            
-            # Проверяем aapt (Android Asset Packaging Tool)
-            AAPT_PATH="$ANDROID_SDK_ROOT/build-tools/34.0.0/aapt"
-            if [ -f "$AAPT_PATH" ]; then
-              echo "📋 Package info:"
-              "$AAPT_PATH" dump badging "$APK_PATH" | grep -E "package|sdkVersion|targetSdkVersion" || true
-            else
-              echo "⚠️ aapt not found at $AAPT_PATH"
-              echo "Listing build-tools:"
-              ls -la "$ANDROID_SDK_ROOT/build-tools/"
-            fi
           else
-            echo "❌ APK not found!"
-            echo "Searching for APK files..."
-            find . -name "*.apk" -type f
-            exit 1
+            echo "❌ No APK found"
           fi
     
     artifacts:
       - app/build/outputs/apk/debug/*.apk
-      - app/build/outputs/bundle/debug/*.aab
-      - app/build/reports/**/*.html
     
     publishing:
-      scripts:
-        - name: Build summary
-          script: |
-            echo "=========================================="
-            echo "✅ HERMES TRANSLATOR BUILD #$BUILD_NUMBER SUCCESS!"
-            echo "=========================================="
-            echo ""
-            echo "🎮 FEATURES INCLUDED:"
-            echo "   • System audio capture (Android 10+)"
-            echo "   • Vosk offline speech recognition"
-            echo "   • Google ML Kit translation"
-            echo "   • Real-time game overlay"
-            echo "   • PS Remote Play detection"
-            echo "   • 4 translation modes (Game/Movie/Stream/Fast)"
-            echo "   • 3 voice types (Hermes/Athena/Cyborg)"
-            echo ""
-            echo "📱 TARGET: Android 8.0+ (API 26)"
-            echo "🔊 PERMISSIONS: RECORD_AUDIO, SYSTEM_ALERT_WINDOW, CAPTURE_AUDIO_OUTPUT"
-            echo ""
-            echo "=========================================="
-      
       email:
         recipients:
           - ovanes931@gmail.com

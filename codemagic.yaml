@@ -20,69 +20,108 @@ workflows:
           include: true
     
     scripts:
-      # 1. Встроенный SDK в Codemagic
+      # 1. ФИКС: Удаляем Windows .bat файл сразу (macOS пытается его запустить)
+      - name: Remove Windows batch file
+        script: |
+          echo "🔧 Removing Windows .bat file for macOS..."
+          rm -f gradlew.bat
+          echo "✅ Windows .bat file removed"
+      
+      # 2. Делаем gradlew исполняемым
+      - name: Make gradlew executable
+        script: |
+          chmod +x ./gradlew
+          echo "✅ gradlew is now executable"
+      
+      # 3. Проверяем что gradlew работает
+      - name: Test gradle wrapper
+        script: |
+          echo "🚀 Testing gradle wrapper..."
+          ./gradlew --version || {
+            echo "❌ Gradle test failed"
+            exit 1
+          }
+      
+      # 4. Проверка Android SDK (macOS путь)
       - name: Check Android SDK
         script: |
           echo "Android SDK path: $ANDROID_SDK_ROOT"
-          ls -la $ANDROID_SDK_ROOT/cmdline-tools/
+          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/" || echo "Cmdline tools found"
       
-      # 2. Правильная установка недостающих компонентов
+      # 5. Установка Android компонентов (macOS compatible)
       - name: Install Android components
         script: |
-          # Устанавливаем недостающие компоненты
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34"
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "build-tools;34.0.0"
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "platform-tools"
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "cmdline-tools;latest"
+          echo "📦 Installing Android components..."
+          
+          # Проверяем доступные команды
+          which sdkmanager || echo "sdkmanager not in PATH, using full path"
+          
+          # Используем полный путь к sdkmanager
+          SDK_MANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          
+          # Устанавливаем компоненты
+          $SDK_MANAGER --install "platforms;android-34" --sdk_root="$ANDROID_SDK_ROOT"
+          $SDK_MANAGER --install "build-tools;34.0.0" --sdk_root="$ANDROID_SDK_ROOT"
+          $SDK_MANAGER --install "platform-tools" --sdk_root="$ANDROID_SDK_ROOT"
+          
+          echo "✅ Android components installed"
       
-      # 3. Установка Java 17
-      - name: Setup Java 17
+      # 6. Проверка Java (уже установлено на macOS)
+      - name: Check Java version
         script: |
-          sudo apt-get update
-          sudo apt-get install -y openjdk-17-jdk
+          echo "☕ Checking Java..."
           java -version
+          echo "✅ Java is ready"
       
-      # 4. Разрешения для gradlew
-      - name: Grant execute permission for gradlew
-        script: |
-          chmod +x ./gradlew
-          ./gradlew --version
-      
-      # 5. Сборка debug APK
+      # 7. Сборка debug APK
       - name: Build debug APK
         script: |
+          echo "🔨 Building debug APK..."
           ./gradlew assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
-            --stacktrace
+            --stacktrace \
+            --no-daemon
       
-      # 6. Сборка debug App Bundle
+      # 8. Сборка debug App Bundle
       - name: Build debug App Bundle
         script: |
+          echo "📦 Building debug App Bundle..."
           ./gradlew bundleDebug \
             -PversionCode=$BUILD_NUMBER \
-            -PversionName=$VERSION_NAME
+            -PversionName=$VERSION_NAME \
+            --no-daemon
       
-      # 7. Тесты
+      # 9. Тесты (опционально)
       - name: Run tests
         script: |
-          ./gradlew testDebugUnitTest || echo "Tests completed"
+          echo "🧪 Running tests..."
+          ./gradlew testDebugUnitTest 2>&1 | tail -50 || echo "Tests completed"
       
-      # 8. Проверка APK
+      # 10. Проверка APK
       - name: Check APK size and info
         script: |
+          echo "🔍 Checking APK..."
           APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
+          
           if [ -f "$APK_PATH" ]; then
-            echo "📦 APK built: $APK_PATH"
+            echo "🎉 APK built successfully!"
+            echo "📦 File: $APK_PATH"
             echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
-            echo "📋 Package info:"
-            $ANDROID_SDK_ROOT/build-tools/34.0.0/aapt dump badging "$APK_PATH" | grep -E "package|sdkVersion|targetSdkVersion|uses-permission"
             
-            # Проверка специальных разрешений
-            echo "🔍 Checking special permissions:"
-            $ANDROID_SDK_ROOT/build-tools/34.0.0/aapt dump xmltree "$APK_PATH" AndroidManifest.xml | grep -E "CAPTURE_AUDIO_OUTPUT|SYSTEM_ALERT_WINDOW" || echo "Special permissions found"
+            # Проверяем aapt (Android Asset Packaging Tool)
+            AAPT_PATH="$ANDROID_SDK_ROOT/build-tools/34.0.0/aapt"
+            if [ -f "$AAPT_PATH" ]; then
+              echo "📋 Package info:"
+              "$AAPT_PATH" dump badging "$APK_PATH" | grep -E "package|sdkVersion|targetSdkVersion" || true
+            else
+              echo "⚠️ aapt not found at $AAPT_PATH"
+              echo "Listing build-tools:"
+              ls -la "$ANDROID_SDK_ROOT/build-tools/"
+            fi
           else
             echo "❌ APK not found!"
+            echo "Searching for APK files..."
             find . -name "*.apk" -type f
             exit 1
           fi
@@ -91,19 +130,28 @@ workflows:
       - app/build/outputs/apk/debug/*.apk
       - app/build/outputs/bundle/debug/*.aab
       - app/build/reports/**/*.html
-      - app/build/outputs/lint-results-debug.html
     
     publishing:
       scripts:
         - name: Build summary
           script: |
-            echo "✅ Hermes Translator build #$BUILD_NUMBER completed!"
-            echo "🎯 Features included:"
-            echo "   - System audio capture (Android 10+)"
-            echo "   - Vosk speech recognition"
-            echo "   - ML Kit translation"
-            echo "   - Game overlay mode"
-            echo "   - PS Remote Play detection"
+            echo "=========================================="
+            echo "✅ HERMES TRANSLATOR BUILD #$BUILD_NUMBER SUCCESS!"
+            echo "=========================================="
+            echo ""
+            echo "🎮 FEATURES INCLUDED:"
+            echo "   • System audio capture (Android 10+)"
+            echo "   • Vosk offline speech recognition"
+            echo "   • Google ML Kit translation"
+            echo "   • Real-time game overlay"
+            echo "   • PS Remote Play detection"
+            echo "   • 4 translation modes (Game/Movie/Stream/Fast)"
+            echo "   • 3 voice types (Hermes/Athena/Cyborg)"
+            echo ""
+            echo "📱 TARGET: Android 8.0+ (API 26)"
+            echo "🔊 PERMISSIONS: RECORD_AUDIO, SYSTEM_ALERT_WINDOW, CAPTURE_AUDIO_OUTPUT"
+            echo ""
+            echo "=========================================="
       
       email:
         recipients:

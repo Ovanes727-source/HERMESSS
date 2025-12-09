@@ -7,38 +7,29 @@ workflows:
         PACKAGE_NAME: "com.hermes.translator"
         BUILD_NUMBER: 1
         VERSION_NAME: "1.0.0-alpha"
-        
+
     scripts:
-      # 1. СКАЧИВАЕМ И УСТАНАВЛИВАЕМ GRADLE НАПРЯМУЮ
-      - name: Install Gradle directly
+      # 1. Переходим в директорию проекта
+      - name: Go to build dir
         script: |
-          echo "📦 Installing Gradle 8.0..."
-          
-          # Скачиваем Gradle
-          wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
-          unzip -q gradle-8.0-bin.zip
-          
-          # Добавляем в PATH
-          export PATH="$(pwd)/gradle-8.0/bin:$PATH"
-          echo "PATH updated: $PATH"
-          
-          # Проверяем
-          gradle --version
-          echo "✅ Gradle installed"
-      
-      # 2. ИСПОЛЬЗУЕМ GRADLE НАПРЯМУЮ (без ./gradlew)
-      - name: Build APK with direct gradle
+          cd $CM_BUILD_DIR
+          echo "📁 Current directory: $(pwd)"
+
+      # 2. Делаем Gradle Wrapper исполняемым
+      - name: Prepare Gradle Wrapper
         script: |
-          echo "🔨 Building APK with gradle command..."
-          
-          # Используем gradle вместо ./gradlew
-          gradle assembleDebug \
+          chmod +x ./gradlew
+          ./gradlew --version
+
+      # 3. Собираем APK через gradlew
+      - name: Build APK
+        script: |
+          ./gradlew assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
-            --stacktrace \
-            --no-daemon
-      
-      # 3. Проверка APK
+            --stacktrace
+
+      # 4. Проверка APK
       - name: Check APK
         script: |
           APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
@@ -46,8 +37,6 @@ workflows:
             echo "🎉 SUCCESS! Hermes Translator APK built!"
             echo "📦 File: $APK_PATH"
             echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
-            
-            # Информация о фичах
             echo ""
             echo "✨ HERMES TRANSLATOR FEATURES:"
             echo "   • System Audio Capture (Android 10+)"
@@ -62,14 +51,6 @@ workflows:
             find . -name "*.apk" -type f
             exit 1
           fi
-    
+
     artifacts:
       - app/build/outputs/apk/debug/*.apk
-    
-    publishing:
-      email:
-        recipients:
-          - ovanes931@gmail.com
-        notify:
-          success: true
-          failure: true

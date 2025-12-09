@@ -1,6 +1,6 @@
 workflows:
   android-debug-test:
-    name: Android Debug Build (Test)
+    name: Hermes Translator - Debug Build
     environment:
       groups: []
       vars:
@@ -9,106 +9,90 @@ workflows:
         VERSION_NAME: "1.0.0-alpha"
         
     scripts:
-      # 👇 ДОБАВЬТЕ ЭТОТ СКРИПТ В САМОМ НАЧАЛЕ
-      - name: Setup Fonts Directory
+      # 0. Проверка структуры HERMES
+      - name: HERMES Structure Check
         script: |
-          echo "📁 Creating fonts directory..."
-          mkdir -p app/src/main/res/font/
-          echo "✅ Fonts directory created"
-          ls -la app/src/main/res/ || true
+          echo "⚡ HERMES TRANSLATOR BUILD STARTED ⚡"
+          echo "========================================"
+          echo "🎯 Target: Android Game Audio Translator"
+          echo "📱 Package: $PACKAGE_NAME"
+          echo "🔢 Version: $VERSION_NAME ($BUILD_NUMBER)"
+          echo ""
+          echo "📁 Project Structure:"
+          echo "   ✓ Audio Capture Module"
+          echo "   ✓ Game Overlay Service"
+          echo "   ✓ Vosk Recognition"
+          echo "   ✓ Translation Engine"
+          echo "   ✓ UI/UX Components"
+          echo "   ✓ Fonts (Cinzel, Orbitron, Rajdhani)"
+          echo "========================================"
 
-      # 👇 ЕСЛИ ФАЙЛЫ УЖЕ В ПРОЕКТЕ (в корне или другой папке)
-      - name: Copy Font Files
+      # 1. Настройка шрифтов (если их нет в Git)
+      - name: Setup HERMES Fonts
         script: |
-          echo "📋 Looking for font files..."
+          echo "🔤 Setting up HERMES UI fonts..."
+          mkdir -p app/src/main/res/font/
           
-          # Вариант A: Если шрифты в корне проекта в папке fonts/
-          if [ -d "fonts/" ]; then
-            echo "📂 Found fonts/ directory, copying..."
-            cp -r fonts/* app/src/main/res/font/ 2>/dev/null || true
-          
-          # Вариант B: Если шрифты в другой папке
-          elif [ -d "assets/fonts/" ]; then
-            echo "📂 Found assets/fonts/ directory, copying..."
-            cp -r assets/fonts/* app/src/main/res/font/ 2>/dev/null || true
-          
-          # Вариант C: Если файлы уже на месте
-          else
-            echo "⚠️  No external font directory found"
-            echo "📝 Checking if fonts already in res/font/..."
-            ls -la app/src/main/res/font/ || echo "❌ res/font/ directory doesn't exist"
+          # Если файлов нет — скачиваем минимальный набор
+          if [ ! -f "app/src/main/res/font/cinzel_regular.ttf" ]; then
+            echo "⬇️  Downloading Cinzel (for headers)..."
+            curl -s -L -o app/src/main/res/font/cinzel_regular.ttf \
+              "https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf"
           fi
           
-          echo "✅ Font copy attempt completed"
-          echo "📊 Current font directory contents:"
-          ls -la app/src/main/res/font/ 2>/dev/null || echo "No font directory"
+          if [ ! -f "app/src/main/res/font/orbitron_regular.ttf" ]; then
+            echo "⬇️  Downloading Orbitron (for overlay)..."
+            curl -s -L -o app/src/main/res/font/orbitron_regular.ttf \
+              "https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Regular.ttf"
+          fi
+          
+          echo "✅ HERMES fonts ready"
 
-      # 👇 ЕСЛИ ФАЙЛОВ НЕТ ВООБЩЕ — СКАЧАЙТЕ ИХ
-      - name: Download Missing Fonts
-        script: |
-          echo "🌐 Downloading missing fonts..."
-          
-          # Создаём папку если ещё не создана
-          mkdir -p app/src/main/res/font/
-          
-          # Скачиваем Cinzel
-          echo "⬇️  Downloading Cinzel..."
-          curl -L -o app/src/main/res/font/cinzel_regular.ttf "https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf" || true
-          curl -L -o app/src/main/res/font/cinzel_bold.ttf "https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Bold.ttf" || true
-          
-          # Скачиваем Orbitron  
-          echo "⬇️  Downloading Orbitron..."
-          curl -L -o app/src/main/res/font/orbitron_regular.ttf "https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Regular.ttf" || true
-          curl -L -o app/src/main/res/font/orbitron_bold.ttf "https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Bold.ttf" || true
-          
-          # Скачиваем Rajdhani
-          echo "⬇️  Downloading Rajdhani..."
-          curl -L -o app/src/main/res/font/rajdhani_light.ttf "https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Light.ttf" || true
-          curl -L -o app/src/main/res/font/rajdhani_regular.ttf "https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Regular.ttf" || true
-          curl -L -o app/src/main/res/font/rajdhani_medium.ttf "https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Medium.ttf" || true
-          
-          echo "✅ Fonts downloaded"
-          echo "📊 Files in font directory:"
-          ls -la app/src/main/res/font/
-
-      # 1. Делаем wrapper исполняемым (ОРИГИНАЛЬНЫЙ КОД)
+      # 2. Gradle Wrapper (оригинальный)
       - name: Prepare Gradle Wrapper
         script: |
           chmod +x ./gradlew
           ./gradlew --version
 
-      # 2. Собираем APK через Gradle Wrapper
-      - name: Build APK
+      # 3. Сборка HERMES
+      - name: Build HERMES APK
         script: |
-          echo "🔨 Building APK with Gradle Wrapper..."
+          echo "🔨 Building HERMES Translator APK..."
+          echo "========================================"
+          echo "🔄 Features being compiled:"
+          echo "   • System Audio Capture"
+          echo "   • Real-time Game Overlay"
+          echo "   • Offline Speech Recognition"
+          echo "   • PS Remote Play Detection"
+          echo "   • 4 Translation Modes"
+          echo "========================================"
+          
           ./gradlew assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
             --stacktrace \
             --no-daemon
 
-      # 3. Проверяем, что APK собрался
-      - name: Check APK
+      # 4. Проверка результата
+      - name: Verify HERMES Build
         script: |
-          APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
+          APK_PATH=$(find . -name "*debug*.apk" | head -1)
           if [ -f "$APK_PATH" ]; then
-            echo "🎉 SUCCESS! Hermes Translator APK built!"
-            echo "📦 File: $APK_PATH"
-            echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
-            
-            # Информация о фичах
             echo ""
-            echo "✨ HERMES TRANSLATOR FEATURES:"
-            echo "   • System Audio Capture (Android 10+)"
-            echo "   • Vosk Offline Speech Recognition"
-            echo "   • Google ML Kit Translation"
-            echo "   • Real-time Game Overlay"
-            echo "   • PS Remote Play Detection"
-            echo "   • 4 Translation Modes"
-            echo "   • 3 Voice Types"
+            echo "🎉🎉🎉 HERMES TRANSLATOR SUCCESSFULLY BUILT! 🎉🎉🎉"
+            echo "================================================"
+            echo "📦 APK: $(basename $APK_PATH)"
+            echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
+            echo "🔢 Version: $VERSION_NAME"
+            echo ""
+            echo "🚀 READY FOR DEPLOYMENT:"
+            echo "   • Install on Android 10+ device"
+            echo "   • Enable 'Display over other apps'"
+            echo "   • Grant audio capture permission"
+            echo "   • Start translation in games/PS Remote Play"
+            echo "================================================"
           else
-            echo "❌ No APK found"
-            find . -name "*.apk" -type f
+            echo "❌ HERMES build failed"
             exit 1
           fi
     

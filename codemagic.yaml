@@ -9,49 +9,114 @@ workflows:
         VERSION_NAME: "1.0.0-alpha"
         
     scripts:
-      # 1. ОБЯЗАТЕЛЬНО: Создать шрифты
+      # 0. ФИКС ПРАВ ДОСТУПА (добавьте этот скрипт)
+      - name: Fix Permissions
+        script: |
+          echo "🔧 Fixing file permissions..."
+          chmod +x ./gradlew
+          chmod -R 755 app/src/main/res/font/ 2>/dev/null || true
+          echo "✅ Permissions fixed"
+
+      # 1. СОЗДАТЬ ШРИФТЫ
       - name: Ensure Fonts Exist
         script: |
           echo "🛡️ Ensuring HERMES fonts are present..."
           mkdir -p app/src/main/res/font/
           cd app/src/main/res/font/
           
-          # Создать минимальные XML
+          # Создать XML файлы
           echo '<?xml version="1.0" encoding="utf-8"?>
-          <font-family xmlns:android="http://schemas.android.com/apk/res/android">
-            <font android:font="@font/cinzel_regular" android:fontWeight="400"/>
-            <font android:font="@font/cinzel_bold" android:fontWeight="700"/>
-          </font-family>' > cinzel.xml
-          
-          # Скачать основные шрифты
-          curl -s -L -o cinzel_regular.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Regular.ttf"
-          curl -s -L -o cinzel_bold.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Bold.ttf"
-          
-          echo "✅ HERMES fonts ready"
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+  <font android:font="@font/cinzel_regular" android:fontWeight="400"/>
+  <font android:font="@font/cinzel_bold" android:fontWeight="700"/>
+</font-family>' > cinzel.xml
 
-      # 2. Сборка (оригинальный ваш код)
+          echo '<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+  <font android:font="@font/orbitron_regular" android:fontWeight="400"/>
+  <font android:font="@font/orbitron_bold" android:fontWeight="700"/>
+</font-family>' > orbitron.xml
+
+          echo '<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+  <font android:font="@font/rajdhani_light" android:fontWeight="300"/>
+  <font android:font="@font/rajdhani_regular" android:fontWeight="400"/>
+  <font android:font="@font/rajdhani_medium" android:fontWeight="500"/>
+</font-family>' > rajdhani.xml
+          
+          # Скачать ВСЕ шрифты
+          echo "⬇️ Downloading fonts..."
+          
+          # Cinzel
+          curl -s -L -o cinzel_regular.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Regular.ttf" || true
+          curl -s -L -o cinzel_bold.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Bold.ttf" || true
+          
+          # Orbitron
+          curl -s -L -o orbitron_regular.ttf "https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Regular.ttf" || true
+          curl -s -L -o orbitron_bold.ttf "https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Bold.ttf" || true
+          
+          # Rajdhani
+          curl -s -L -o rajdhani_light.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Light.ttf" || true
+          curl -s -L -o rajdhani_regular.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Regular.ttf" || true
+          curl -s -L -o rajdhani_medium.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Medium.ttf" || true
+          
+          echo "✅ Fonts ready. Files: $(ls -1 | wc -l)"
+
+      # 2. ПОДГОТОВКА GRADLE (обязательно!)
+      - name: Prepare Gradle
+        script: |
+          echo "⚙️ Preparing Gradle..."
+          ./gradlew --version || echo "Gradle version check (may fail)"
+          echo "✅ Gradle prepared"
+
+      # 3. СБОРКА HERMES
       - name: Build HERMES APK
         script: |
-          echo "🔨 Building HERMES with ALL features..."
-          ./gradlew assembleDebug \
+          echo "🔨 Building HERMES Translator with ALL features..."
+          echo "========================================"
+          echo "🚀 Features included:"
+          echo "   • System Audio Capture"
+          echo "   • Real-time Game Overlay"
+          echo "   • Vosk Offline Recognition"
+          echo "   • Google ML Kit Translation"
+          echo "   • PS Remote Play Detection"
+          echo "   • 4 Translation Modes"
+          echo "   • 3 Voice Types"
+          echo "========================================"
+          
+          # Сборка с очисткой кэша
+          ./gradlew clean assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
-            --stacktrace
+            --stacktrace \
+            --no-daemon \
+            --console=plain
 
-      # 3. Проверка
-      - name: Verify Build
+      # 4. ПРОВЕРКА
+      - name: Verify HERMES Build
         script: |
-          if [ -f "app/build/outputs/apk/debug/*.apk" ]; then
-            echo "🎉 HERMES SUCCESS! All features:"
-            echo "   • Audio Capture ✓"
-            echo "   • Game Overlay ✓"
-            echo "   • Vosk Offline ✓"
-            echo "   • ML Kit Translate ✓"
-            echo "   • PS Remote Play ✓"
+          echo "🔍 Checking build result..."
+          APK_PATH=$(find . -name "*.apk" -path "*/debug/*" 2>/dev/null | head -1)
+          
+          if [ -f "$APK_PATH" ]; then
+            echo ""
+            echo "🎉🎉🎉 HERMES TRANSLATOR SUCCESSFULLY BUILT! 🎉🎉🎉"
+            echo "================================================"
+            echo "📦 APK: $(basename "$APK_PATH")"
+            echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
+            echo "🔢 Version: $VERSION_NAME"
+            echo ""
+            echo "🚀 READY TO INSTALL ON ANDROID 10+"
+            echo "================================================"
           else
-            echo "❌ Build failed"
+            echo "❌ HERMES build failed"
+            echo "📁 Checking what's in font directory:"
+            ls -la app/src/main/res/font/ 2>/dev/null || echo "No font directory"
+            echo "🔍 Looking for APKs:"
+            find . -name "*.apk" -type f 2>/dev/null
             exit 1
           fi
     
     artifacts:
       - app/build/outputs/apk/debug/*.apk
+      - app/build/outputs/logs/

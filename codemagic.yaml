@@ -9,54 +9,58 @@ workflows:
         VERSION_NAME: "1.0.0-alpha"
         
     scripts:
-      # 1. ФИКС СРАЗУ ВСЕГО
-      - name: Fix everything at once
+      # 1. СКАЧИВАЕМ И УСТАНАВЛИВАЕМ GRADLE НАПРЯМУЮ
+      - name: Install Gradle directly
         script: |
-          echo "🔧 ONE-TIME FIX FOR CODEMAGIC..."
+          echo "📦 Installing Gradle 8.0..."
           
-          # Удаляем Windows файл
-          rm -f gradlew.bat
-          
-          # Исправляем кавычки в gradlew
-          sed -i '' "s/DEFAULT_JVM_OPTS='\"-Xmx64m\" \"-Xms64m\"'/DEFAULT_JVM_OPTS='-Xmx1024m -Xms256m'/g" gradlew
-          
-          # Даём права
-          chmod +x ./gradlew
-          
-          # СКАЧИВАЕМ GRADLE ВРУЧНУЮ
-          echo "📦 Downloading Gradle 8.0..."
+          # Скачиваем Gradle
           wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
           unzip -q gradle-8.0-bin.zip
-          mkdir -p ~/.gradle/wrapper/dists/gradle-8.0-bin/
-          cp -r gradle-8.0/* ~/.gradle/wrapper/dists/gradle-8.0-bin/
           
-          # ТЕСТ
-          echo "🚀 Testing..."
-          ./gradlew --version || {
-            echo "❌ Still failing, using system gradle..."
-            # Используем системный gradle как запасной вариант
-            gradle --version 2>/dev/null || echo "No system gradle"
-          }
+          # Добавляем в PATH
+          export PATH="$(pwd)/gradle-8.0/bin:$PATH"
+          echo "PATH updated: $PATH"
+          
+          # Проверяем
+          gradle --version
+          echo "✅ Gradle installed"
       
-      # 2. Сборка APK
-      - name: Build APK
+      # 2. ИСПОЛЬЗУЕМ GRADLE НАПРЯМУЮ (без ./gradlew)
+      - name: Build APK with direct gradle
         script: |
-          echo "🔨 Building APK..."
-          ./gradlew assembleDebug \
+          echo "🔨 Building APK with gradle command..."
+          
+          # Используем gradle вместо ./gradlew
+          gradle assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
             --stacktrace \
             --no-daemon
       
-      # 3. Проверка
+      # 3. Проверка APK
       - name: Check APK
         script: |
           APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
           if [ -f "$APK_PATH" ]; then
-            echo "✅ SUCCESS! APK: $APK_PATH"
+            echo "🎉 SUCCESS! Hermes Translator APK built!"
+            echo "📦 File: $APK_PATH"
             echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
+            
+            # Информация о фичах
+            echo ""
+            echo "✨ HERMES TRANSLATOR FEATURES:"
+            echo "   • System Audio Capture (Android 10+)"
+            echo "   • Vosk Offline Speech Recognition"
+            echo "   • Google ML Kit Translation"
+            echo "   • Real-time Game Overlay"
+            echo "   • PS Remote Play Detection"
+            echo "   • 4 Translation Modes"
+            echo "   • 3 Voice Types"
           else
             echo "❌ No APK found"
+            find . -name "*.apk" -type f
+            exit 1
           fi
     
     artifacts:

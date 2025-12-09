@@ -90,7 +90,7 @@ workflows:
       
       email:
         recipients:
-          - $your_email_here@example.com  # ⚠️ ЗАМЕНИТЕ на ваш email
+          - ovanes931@gmail.com
         notify:
           success: true
           failure: true
@@ -189,7 +189,7 @@ workflows:
       
       email:
         recipients:
-          - $your_email_here@example.com  # ⚠️ ЗАМЕНИТЕ
+           - ovanes931@gmail.com
         notify:
           success: true
           failure: true

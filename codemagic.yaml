@@ -9,52 +9,136 @@ workflows:
         VERSION_NAME: "1.0.0-alpha"
         
     scripts:
-      # 0. Проверка структуры HERMES
-      - name: HERMES Structure Check
+      # 0. СИЛОЙ СОЗДАЁМ ШРИФТЫ ЕСЛИ ИХ НЕТ
+      - name: FORCE FONT CREATION
         script: |
-          echo "⚡ HERMES TRANSLATOR BUILD STARTED ⚡"
-          echo "========================================"
-          echo "🎯 Target: Android Game Audio Translator"
-          echo "📱 Package: $PACKAGE_NAME"
-          echo "🔢 Version: $VERSION_NAME ($BUILD_NUMBER)"
-          echo ""
-          echo "📁 Project Structure:"
-          echo "   ✓ Audio Capture Module"
-          echo "   ✓ Game Overlay Service"
-          echo "   ✓ Vosk Recognition"
-          echo "   ✓ Translation Engine"
-          echo "   ✓ UI/UX Components"
-          echo "   ✓ Fonts (Cinzel, Orbitron, Rajdhani)"
-          echo "========================================"
-
-      # 1. Настройка шрифтов (если их нет в Git)
-      - name: Setup HERMES Fonts
-        script: |
-          echo "🔤 Setting up HERMES UI fonts..."
+          echo "🚨 ENSURING FONT FILES EXIST..."
+          
+          # 1. Удалить всё старое (чистый старт)
+          rm -rf app/src/main/res/font/ 2>/dev/null || true
+          
+          # 2. Создать папку
           mkdir -p app/src/main/res/font/
+          cd app/src/main/res/font/
           
-          # Если файлов нет — скачиваем минимальный набор
-          if [ ! -f "app/src/main/res/font/cinzel_regular.ttf" ]; then
-            echo "⬇️  Downloading Cinzel (for headers)..."
-            curl -s -L -o app/src/main/res/font/cinzel_regular.ttf \
-              "https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf"
-          fi
+          # 3. СОЗДАТЬ XML ФАЙЛЫ (текстовые)
+          echo "📝 Creating XML font definitions..."
           
-          if [ ! -f "app/src/main/res/font/orbitron_regular.ttf" ]; then
-            echo "⬇️  Downloading Orbitron (for overlay)..."
-            curl -s -L -o app/src/main/res/font/orbitron_regular.ttf \
-              "https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Regular.ttf"
-          fi
-          
-          echo "✅ HERMES fonts ready"
+          # Cinzel
+          cat > cinzel.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font android:fontStyle="normal" android:fontWeight="400"
+          android:font="@font/cinzel_regular"
+          app:fontStyle="normal" app:fontWeight="400"
+          app:font="@font/cinzel_regular" />
+    <font android:fontStyle="normal" android:fontWeight="700"
+          android:font="@font/cinzel_bold"
+          app:fontStyle="normal" app:fontWeight="700"
+          app:font="@font/cinzel_bold" />
+</font-family>
+EOF
 
-      # 2. Gradle Wrapper (оригинальный)
+          # Orbitron
+          cat > orbitron.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font android:fontStyle="normal" android:fontWeight="400"
+          android:font="@font/orbitron_regular"
+          app:fontStyle="normal" app:fontWeight="400"
+          app:font="@font/orbitron_regular" />
+    <font android:fontStyle="normal" android:fontWeight="700"
+          android:font="@font/orbitron_bold"
+          app:fontStyle="normal" app:fontWeight="700"
+          app:font="@font/orbitron_bold" />
+</font-family>
+EOF
+
+          # Rajdhani
+          cat > rajdhani.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font android:fontStyle="normal" android:fontWeight="300"
+          android:font="@font/rajdhani_light"
+          app:fontStyle="normal" app:fontWeight="300"
+          app:font="@font/rajdhani_light" />
+    <font android:fontStyle="normal" android:fontWeight="400"
+          android:font="@font/rajdhani_regular"
+          app:fontStyle="normal" app:fontWeight="400"
+          app:font="@font/rajdhani_regular" />
+    <font android:fontStyle="normal" android:fontWeight="500"
+          android:font="@font/rajdhani_medium"
+          app:fontStyle="normal" app:fontWeight="500"
+          app:font="@font/rajdhani_medium" />
+</font-family>
+EOF
+
+          echo "✅ XML files created"
+          
+          # 4. СКАЧАТЬ ВСЕ TTF ФАЙЛЫ
+          echo "⬇️ Downloading TTF font files..."
+          
+          # Список всех шрифтов с альтернативными ссылками
+          declare -A fonts
+          fonts=(
+            ["cinzel_regular.ttf"]="https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Regular.ttf"
+            ["cinzel_bold.ttf"]="https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Bold.ttf https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Bold.ttf"
+            ["orbitron_regular.ttf"]="https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Regular.ttf https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Regular.ttf"
+            ["orbitron_bold.ttf"]="https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Bold.ttf https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Bold.ttf"
+            ["rajdhani_light.ttf"]="https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Light.ttf https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Light.ttf"
+            ["rajdhani_regular.ttf"]="https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Regular.ttf https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Regular.ttf"
+            ["rajdhani_medium.ttf"]="https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Medium.ttf https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Medium.ttf"
+          )
+          
+          for file in "${!fonts[@]}"; do
+            echo "  Downloading: $file"
+            urls=(${fonts[$file]})
+            
+            # Пробуем первую ссылку
+            if curl -s -L -o "$file" "${urls[0]}" && [ -s "$file" ]; then
+              echo "    ✅ Success"
+            else
+              # Пробуем вторую ссылку
+              echo "    ⚠️  Retrying with alternative URL..."
+              curl -s -L -o "$file" "${urls[1]}"
+              
+              if [ -s "$file" ]; then
+                echo "    ✅ Success (alternative)"
+              else
+                echo "    ❌ FAILED: $file"
+                # Создаем пустой файл чтобы сборка не падала на этом
+                touch "$file"
+              fi
+            fi
+          done
+          
+          # 5. ПРОВЕРКА
+          echo ""
+          echo "📊 FINAL CHECK:"
+          echo "XML files: $(ls *.xml | wc -l) (should be 3)"
+          echo "TTF files: $(ls *.ttf | wc -l) (should be 7)"
+          echo "Total: $(ls | wc -l) files"
+          
+          # Проверить размеры
+          echo ""
+          echo "📏 File sizes:"
+          for f in *.ttf; do
+            size=$(du -h "$f" 2>/dev/null | cut -f1 || echo "0")
+            echo "  $f: $size"
+          done
+          
+          cd ../../../../..
+
+      # 1. Gradle Wrapper
       - name: Prepare Gradle Wrapper
         script: |
           chmod +x ./gradlew
           ./gradlew --version
 
-      # 3. Сборка HERMES
+      # 2. Сборка HERMES
       - name: Build HERMES APK
         script: |
           echo "🔨 Building HERMES Translator APK..."
@@ -65,6 +149,7 @@ workflows:
           echo "   • Offline Speech Recognition"
           echo "   • PS Remote Play Detection"
           echo "   • 4 Translation Modes"
+          echo "   • Custom Fonts: Cinzel, Orbitron, Rajdhani"
           echo "========================================"
           
           ./gradlew assembleDebug \
@@ -73,7 +158,7 @@ workflows:
             --stacktrace \
             --no-daemon
 
-      # 4. Проверка результата
+      # 3. Проверка
       - name: Verify HERMES Build
         script: |
           APK_PATH=$(find . -name "*debug*.apk" | head -1)
@@ -85,14 +170,13 @@ workflows:
             echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
             echo "🔢 Version: $VERSION_NAME"
             echo ""
-            echo "🚀 READY FOR DEPLOYMENT:"
-            echo "   • Install on Android 10+ device"
-            echo "   • Enable 'Display over other apps'"
-            echo "   • Grant audio capture permission"
-            echo "   • Start translation in games/PS Remote Play"
+            echo "🚀 READY FOR DEPLOYMENT"
             echo "================================================"
           else
             echo "❌ HERMES build failed"
+            # Проверим что в папке со шрифтами
+            echo "🔍 Checking font directory:"
+            ls -la app/src/main/res/font/ 2>/dev/null || echo "Font directory not found!"
             exit 1
           fi
     

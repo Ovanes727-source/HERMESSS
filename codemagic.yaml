@@ -9,7 +9,69 @@ workflows:
         VERSION_NAME: "1.0.0-alpha"
         
     scripts:
-      # 1. Делаем wrapper исполняемым
+      # 👇 ДОБАВЬТЕ ЭТОТ СКРИПТ В САМОМ НАЧАЛЕ
+      - name: Setup Fonts Directory
+        script: |
+          echo "📁 Creating fonts directory..."
+          mkdir -p app/src/main/res/font/
+          echo "✅ Fonts directory created"
+          ls -la app/src/main/res/ || true
+
+      # 👇 ЕСЛИ ФАЙЛЫ УЖЕ В ПРОЕКТЕ (в корне или другой папке)
+      - name: Copy Font Files
+        script: |
+          echo "📋 Looking for font files..."
+          
+          # Вариант A: Если шрифты в корне проекта в папке fonts/
+          if [ -d "fonts/" ]; then
+            echo "📂 Found fonts/ directory, copying..."
+            cp -r fonts/* app/src/main/res/font/ 2>/dev/null || true
+          
+          # Вариант B: Если шрифты в другой папке
+          elif [ -d "assets/fonts/" ]; then
+            echo "📂 Found assets/fonts/ directory, copying..."
+            cp -r assets/fonts/* app/src/main/res/font/ 2>/dev/null || true
+          
+          # Вариант C: Если файлы уже на месте
+          else
+            echo "⚠️  No external font directory found"
+            echo "📝 Checking if fonts already in res/font/..."
+            ls -la app/src/main/res/font/ || echo "❌ res/font/ directory doesn't exist"
+          fi
+          
+          echo "✅ Font copy attempt completed"
+          echo "📊 Current font directory contents:"
+          ls -la app/src/main/res/font/ 2>/dev/null || echo "No font directory"
+
+      # 👇 ЕСЛИ ФАЙЛОВ НЕТ ВООБЩЕ — СКАЧАЙТЕ ИХ
+      - name: Download Missing Fonts
+        script: |
+          echo "🌐 Downloading missing fonts..."
+          
+          # Создаём папку если ещё не создана
+          mkdir -p app/src/main/res/font/
+          
+          # Скачиваем Cinzel
+          echo "⬇️  Downloading Cinzel..."
+          curl -L -o app/src/main/res/font/cinzel_regular.ttf "https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Regular.ttf" || true
+          curl -L -o app/src/main/res/font/cinzel_bold.ttf "https://github.com/georgiau/cinzel/raw/main/fonts/ttf/Cinzel-Bold.ttf" || true
+          
+          # Скачиваем Orbitron  
+          echo "⬇️  Downloading Orbitron..."
+          curl -L -o app/src/main/res/font/orbitron_regular.ttf "https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Regular.ttf" || true
+          curl -L -o app/src/main/res/font/orbitron_bold.ttf "https://github.com/theleagueof/orbitron/raw/master/fonts/ttf/Orbitron-Bold.ttf" || true
+          
+          # Скачиваем Rajdhani
+          echo "⬇️  Downloading Rajdhani..."
+          curl -L -o app/src/main/res/font/rajdhani_light.ttf "https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Light.ttf" || true
+          curl -L -o app/src/main/res/font/rajdhani_regular.ttf "https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Regular.ttf" || true
+          curl -L -o app/src/main/res/font/rajdhani_medium.ttf "https://github.com/IndianTypeFoundry/Rajdhani/raw/master/fonts/ttf/Rajdhani-Medium.ttf" || true
+          
+          echo "✅ Fonts downloaded"
+          echo "📊 Files in font directory:"
+          ls -la app/src/main/res/font/
+
+      # 1. Делаем wrapper исполняемым (ОРИГИНАЛЬНЫЙ КОД)
       - name: Prepare Gradle Wrapper
         script: |
           chmod +x ./gradlew

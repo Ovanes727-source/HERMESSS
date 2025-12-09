@@ -73,7 +73,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
     // Audio Processing
-    implementation 'com.github.nickreinerink:oboe-android:1.7.0'
+    implementation 'com.google.oboe:oboe:1.7.0'
 
     // Speech Recognition - Vosk (offline)
     implementation 'com.alphacephei:vosk-android:0.3.47'

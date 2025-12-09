@@ -7,29 +7,25 @@ workflows:
         PACKAGE_NAME: "com.hermes.translator"
         BUILD_NUMBER: 1
         VERSION_NAME: "1.0.0-alpha"
-
+        
     scripts:
-      # 1. Переходим в директорию проекта
-      - name: Go to build dir
-        script: |
-          cd $CM_BUILD_DIR
-          echo "📁 Current directory: $(pwd)"
-
-      # 2. Делаем Gradle Wrapper исполняемым
+      # 1. Делаем wrapper исполняемым
       - name: Prepare Gradle Wrapper
         script: |
           chmod +x ./gradlew
           ./gradlew --version
 
-      # 3. Собираем APK через gradlew
+      # 2. Собираем APK через Gradle Wrapper
       - name: Build APK
         script: |
+          echo "🔨 Building APK with Gradle Wrapper..."
           ./gradlew assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
-            --stacktrace
+            --stacktrace \
+            --no-daemon
 
-      # 4. Проверка APK
+      # 3. Проверяем, что APK собрался
       - name: Check APK
         script: |
           APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
@@ -37,6 +33,8 @@ workflows:
             echo "🎉 SUCCESS! Hermes Translator APK built!"
             echo "📦 File: $APK_PATH"
             echo "📏 Size: $(du -h "$APK_PATH" | cut -f1)"
+            
+            # Информация о фичах
             echo ""
             echo "✨ HERMES TRANSLATOR FEATURES:"
             echo "   • System Audio Capture (Android 10+)"
@@ -51,6 +49,6 @@ workflows:
             find . -name "*.apk" -type f
             exit 1
           fi
-
+    
     artifacts:
       - app/build/outputs/apk/debug/*.apk

@@ -1,0 +1,198 @@
+workflows:
+  android-debug-test:
+    name: Android Debug Build (Test)
+    environment:
+      groups:
+        # Создайте эти переменные в настройках Codemagic:
+        # - vosk_model_url (опционально, для загрузки моделей)
+        # - test_emails (список email для тестовых рассылок)
+      vars:
+        PACKAGE_NAME: "com.hermes.translator"
+        BUILD_NUMBER: 1
+        VERSION_NAME: "1.0.0-alpha"
+        
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "develop"
+          include: true
+        - pattern: "feature/*"
+          include: true
+        - pattern: "test/*"
+          include: true
+    
+    scripts:
+      - name: Setup Java 17
+        script: |
+          sudo update-java-alternatives --set java-17-amazon-corretto
+          java -version
+      
+      - name: Setup Android SDK
+        script: |
+          yes | sdkmanager "platforms;android-34"
+          yes | sdkmanager "platform-tools"
+          yes | sdkmanager "build-tools;34.0.0"
+          yes | sdkmanager "cmdline-tools;latest"
+      
+      - name: Grant execute permission for gradlew
+        script: |
+          chmod +x ./gradlew
+      
+      - name: Download Vosk model (опционально)
+        script: |
+          mkdir -p app/src/main/assets/models
+          # Раскомментируйте если нужно скачать модель автоматически
+          # if [ -n "$vosk_model_url" ]; then
+          #   wget -O app/src/main/assets/models/vosk-model-small-en-us.zip "$vosk_model_url"
+          #   unzip -o app/src/main/assets/models/vosk-model-small-en-us.zip -d app/src/main/assets/models/
+          # fi
+      
+      - name: Build debug APK
+        script: |
+          ./gradlew assembleDebug \
+            -PversionCode=$BUILD_NUMBER \
+            -PversionName=$VERSION_NAME
+      
+      - name: Build debug App Bundle
+        script: |
+          ./gradlew bundleDebug \
+            -PversionCode=$BUILD_NUMBER \
+            -PversionName=$VERSION_NAME
+      
+      - name: Run tests
+        script: |
+          ./gradlew testDebugUnitTest
+      
+      - name: Run lint checks
+        script: |
+          ./gradlew lintDebug
+      
+      - name: Check APK size
+        script: |
+          APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
+          if [ -f "$APK_PATH" ]; then
+            echo "APK size: $(du -h "$APK_PATH" | cut -f1)"
+            echo "APK info:"
+            aapt dump badging "$APK_PATH" | grep -E "package|sdkVersion|targetSdkVersion"
+          fi
+    
+    artifacts:
+      - app/build/outputs/apk/debug/*.apk
+      - app/build/outputs/bundle/debug/*.aab
+      - app/build/reports/**/*.html
+      - app/build/outputs/lint-results-debug.html
+    
+    publishing:
+      scripts:
+        - name: Notify about build
+          script: |
+            echo "Build $BUILD_NUMBER completed successfully!"
+            echo "Artifacts:"
+            ls -la app/build/outputs/apk/debug/
+      
+      email:
+        recipients:
+          - $your_email_here@example.com  # ⚠️ ЗАМЕНИТЕ на ваш email
+        notify:
+          success: true
+          failure: true
+
+  # ==============================================
+  # Релизная тестовая сборка (для внутреннего тестирования)
+  # ==============================================
+  android-release-test:
+    name: Android Release Test Build
+    environment:
+      groups:
+        - google_play_credentials  # Для подписи APK
+        - firebase_credentials     # Для публикации в Firebase
+      vars:
+        PACKAGE_NAME: "com.hermes.translator"
+        BUILD_NUMBER: 1
+        VERSION_NAME: "1.0.0-beta"
+    
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "main"
+          include: true
+        - pattern: "release/*"
+          include: true
+    
+    scripts:
+      - name: Setup signing
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
+      
+      - name: Create key properties
+        script: |
+          cat > app/key.properties << EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=/tmp/keystore.jks
+          EOF
+      
+      - name: Build release APK
+        script: |
+          ./gradlew assembleRelease \
+            -PversionCode=$BUILD_NUMBER \
+            -PversionName=$VERSION_NAME
+      
+      - name: Build release App Bundle
+        script: |
+          ./gradlew bundleRelease \
+            -PversionCode=$BUILD_NUMBER \
+            -PversionName=$VERSION_NAME
+      
+      - name: Generate mapping file
+        script: |
+          ./gradlew extractReleaseApkMapping
+      
+      - name: Validate APK
+        script: |
+          APK_PATH=$(find . -name "*release.apk" | head -1)
+          if [ -f "$APK_PATH" ]; then
+            echo "✅ Release APK built successfully"
+            echo "📦 APK size: $(du -h "$APK_PATH" | cut -f1)"
+            
+            # Проверка наличия нужных разрешений в манифесте
+            aapt dump xmltree "$APK_PATH" AndroidManifest.xml | grep -A5 -B5 "RECORD_AUDIO\|SYSTEM_ALERT_WINDOW" || true
+          else
+            echo "❌ APK not found!"
+            exit 1
+          fi
+    
+    artifacts:
+      - app/build/outputs/apk/release/*.apk
+      - app/build/outputs/bundle/release/*.aab
+      - app/build/outputs/mapping/release/mapping.txt
+      - app/build/reports/**/*.html
+    
+    publishing:
+      scripts:
+        - name: Publish to Firebase App Distribution
+          script: |
+            # Раскомментируйте если используете Firebase
+            # if [ -n "$FIREBASE_TOKEN" ]; then
+            #   firebase appdistribution:distribute app/build/outputs/apk/release/app-release.apk \
+            #     --app "$FIREBASE_APP_ID" \
+            #     --groups "testers" \
+            #     --release-notes "Build $BUILD_NUMBER - $VERSION_NAME"
+            # fi
+      
+      slack:
+        channel: '#builds'  # Раскомментируйте если используете Slack
+        notify_on_build_start: true
+        notify:
+          success: true
+          failure: true
+      
+      email:
+        recipients:
+          - $your_email_here@example.com  # ⚠️ ЗАМЕНИТЕ
+        notify:
+          success: true
+          failure: true

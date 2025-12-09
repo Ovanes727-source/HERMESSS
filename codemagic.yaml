@@ -1,5 +1,5 @@
 workflows:
-  hermes-android-build:
+  android-debug-test:  # ← ТОЧНО ТАК ЖЕ КАК В ОШИБКЕ
     name: HERMES Translator Build
     instance_type: mac_mini_m1
     environment:
@@ -11,14 +11,18 @@ workflows:
     scripts:
       - name: Setup Project
         script: |
-          echo "⚡ HERMES TRANSLATOR BUILD"
+          echo "⚡ HERMES TRANSLATOR BUILD STARTED"
+          echo "Target: Android Game Audio Translator"
+          echo "Package: $PACKAGE_NAME"
+          echo "Version: $VERSION_NAME ($BUILD_NUMBER)"
 
       - name: Fix Fonts
         script: |
+          echo "🛡️ Creating font files..."
           mkdir -p app/src/main/res/font/
           cd app/src/main/res/font/
           
-          # Cinzel.xml - построчно
+          # Cinzel.xml
           echo '<?xml version="1.0" encoding="utf-8"?>' > cinzel.xml
           echo '<font-family xmlns:android="http://schemas.android.com/apk/res/android"' >> cinzel.xml
           echo '    xmlns:app="http://schemas.android.com/apk/res-auto">' >> cinzel.xml
@@ -32,7 +36,7 @@ workflows:
           echo '          app:font="@font/cinzel_bold"/>' >> cinzel.xml
           echo '</font-family>' >> cinzel.xml
           
-          # Orbitron.xml - построчно
+          # Orbitron.xml
           echo '<?xml version="1.0" encoding="utf-8"?>' > orbitron.xml
           echo '<font-family xmlns:android="http://schemas.android.com/apk/res/android"' >> orbitron.xml
           echo '    xmlns:app="http://schemas.android.com/apk/res-auto">' >> orbitron.xml
@@ -46,7 +50,7 @@ workflows:
           echo '          app:font="@font/orbitron_bold"/>' >> orbitron.xml
           echo '</font-family>' >> orbitron.xml
           
-          # Rajdhani.xml - построчно
+          # Rajdhani.xml
           echo '<?xml version="1.0" encoding="utf-8"?>' > rajdhani.xml
           echo '<font-family xmlns:android="http://schemas.android.com/apk/res/android"' >> rajdhani.xml
           echo '    xmlns:app="http://schemas.android.com/apk/res-auto">' >> rajdhani.xml
@@ -64,7 +68,8 @@ workflows:
           echo '          app:font="@font/rajdhani_medium"/>' >> rajdhani.xml
           echo '</font-family>' >> rajdhani.xml
           
-          # Скачать TTF файлы
+          # Скачать шрифты
+          echo "⬇️ Downloading font files..."
           curl -s -L -o cinzel_regular.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Regular.ttf"
           curl -s -L -o cinzel_bold.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Bold.ttf"
           curl -s -L -o orbitron_regular.ttf "https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Regular.ttf"
@@ -73,22 +78,34 @@ workflows:
           curl -s -L -o rajdhani_regular.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Regular.ttf"
           curl -s -L -o rajdhani_medium.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Medium.ttf"
           
-          echo "✅ Fonts created"
+          echo "✅ Fonts ready"
           ls -la
 
       - name: Build APK
         script: |
+          echo "🔨 Building HERMES APK..."
+          echo "Features included:"
+          echo "• System Audio Capture"
+          echo "• Game Overlay"
+          echo "• Offline Speech Recognition"
+          echo "• PS Remote Play Detection"
+          echo "• 4 Translation Modes"
+          echo "• 3 Voice Types"
+          
           chmod +x ./gradlew
           ./gradlew clean assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
-            --stacktrace
+            --stacktrace \
+            --no-daemon
 
       - name: Check Result
         script: |
           APK_PATH=$(find . -name "*.apk" -path "*/debug/*" | head -1)
           if [ -f "$APK_PATH" ]; then
-            echo "✅ HERMES BUILT: $(basename "$APK_PATH")"
+            echo "🎉 HERMES TRANSLATOR SUCCESSFULLY BUILT!"
+            echo "APK: $(basename "$APK_PATH")"
+            echo "Size: $(du -h "$APK_PATH" | cut -f1)"
           else
             echo "❌ Build failed"
             exit 1

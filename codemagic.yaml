@@ -3,9 +3,6 @@ workflows:
     name: Android Debug Build (Test)
     environment:
       groups: []
-        # Создайте эти переменные в настройках Codemagic:
-        # - vosk_model_url (опционально, для загрузки моделей)
-        # - test_emails (список email для тестовых рассылок)
       vars:
         PACKAGE_NAME: "com.hermes.translator"
         BUILD_NUMBER: 1

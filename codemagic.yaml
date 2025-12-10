@@ -1,7 +1,8 @@
 workflows:
-  android-debug-test:  # ← ТОЧНО ТАК ЖЕ КАК В ОШИБКЕ
+  android-debug-test:
     name: HERMES Translator Build
     instance_type: mac_mini_m1
+
     environment:
       vars:
         PACKAGE_NAME: "com.hermes.translator"
@@ -12,92 +13,96 @@ workflows:
       - name: Setup Project
         script: |
           echo "⚡ HERMES TRANSLATOR BUILD STARTED"
-          echo "Target: Android Game Audio Translator"
           echo "Package: $PACKAGE_NAME"
           echo "Version: $VERSION_NAME ($BUILD_NUMBER)"
 
       - name: Fix Fonts
         script: |
-          echo "🛡️ Creating font files..."
+          echo "🛡️ Fixing fonts..."
           mkdir -p app/src/main/res/font/
           cd app/src/main/res/font/
-          
-          # Cinzel.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>' > cinzel.xml
-          echo '<font-family xmlns:android="http://schemas.android.com/apk/res/android"' >> cinzel.xml
-          echo '    xmlns:app="http://schemas.android.com/apk/res-auto">' >> cinzel.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="400"' >> cinzel.xml
-          echo '          android:font="@font/cinzel_regular"' >> cinzel.xml
-          echo '          app:fontStyle="normal" app:fontWeight="400"' >> cinzel.xml
-          echo '          app:font="@font/cinzel_regular"/>' >> cinzel.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="700"' >> cinzel.xml
-          echo '          android:font="@font/cinzel_bold"' >> cinzel.xml
-          echo '          app:fontStyle="normal" app:fontWeight="700"' >> cinzel.xml
-          echo '          app:font="@font/cinzel_bold"/>' >> cinzel.xml
-          echo '</font-family>' >> cinzel.xml
-          
-          # Orbitron.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>' > orbitron.xml
-          echo '<font-family xmlns:android="http://schemas.android.com/apk/res/android"' >> orbitron.xml
-          echo '    xmlns:app="http://schemas.android.com/apk/res-auto">' >> orbitron.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="400"' >> orbitron.xml
-          echo '          android:font="@font/orbitron_regular"' >> orbitron.xml
-          echo '          app:fontStyle="normal" app:fontWeight="400"' >> orbitron.xml
-          echo '          app:font="@font/orbitron_regular"/>' >> orbitron.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="700"' >> orbitron.xml
-          echo '          android:font="@font/orbitron_bold"' >> orbitron.xml
-          echo '          app:fontStyle="normal" app:fontWeight="700"' >> orbitron.xml
-          echo '          app:font="@font/orbitron_bold"/>' >> orbitron.xml
-          echo '</font-family>' >> orbitron.xml
-          
-          # Rajdhani.xml
-          echo '<?xml version="1.0" encoding="utf-8"?>' > rajdhani.xml
-          echo '<font-family xmlns:android="http://schemas.android.com/apk/res/android"' >> rajdhani.xml
-          echo '    xmlns:app="http://schemas.android.com/apk/res-auto">' >> rajdhani.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="300"' >> rajdhani.xml
-          echo '          android:font="@font/rajdhani_light"' >> rajdhani.xml
-          echo '          app:fontStyle="normal" app:fontWeight="300"' >> rajdhani.xml
-          echo '          app:font="@font/rajdhani_light"/>' >> rajdhani.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="400"' >> rajdhani.xml
-          echo '          android:font="@font/rajdhani_regular"' >> rajdhani.xml
-          echo '          app:fontStyle="normal" app:fontWeight="400"' >> rajdhani.xml
-          echo '          app:font="@font/rajdhani_regular"/>' >> rajdhani.xml
-          echo '    <font android:fontStyle="normal" android:fontWeight="500"' >> rajdhani.xml
-          echo '          android:font="@font/rajdhani_medium"' >> rajdhani.xml
-          echo '          app:fontStyle="normal" app:fontWeight="500"' >> rajdhani.xml
-          echo '          app:font="@font/rajdhani_medium"/>' >> rajdhani.xml
-          echo '</font-family>' >> rajdhani.xml
-          
-          # Скачать шрифты
+
+          echo "📄 Creating font-family XML files..."
+
+          # --------------------
+          # Cinzel font family
+          # --------------------
+          cat <<EOF > cinzel.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <font-family xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto">
+              <font android:fontStyle="normal" android:fontWeight="400"
+                    android:font="@font/cinzel_regular"
+                    app:font="@font/cinzel_regular"/>
+              <font android:fontStyle="normal" android:fontWeight="700"
+                    android:font="@font/cinzel_bold"
+                    app:font="@font/cinzel_bold"/>
+          </font-family>
+          EOF
+
+          # --------------------
+          # Orbitron font family
+          # --------------------
+          cat <<EOF > orbitron.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <font-family xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto">
+              <font android:fontStyle="normal" android:fontWeight="400"
+                    android:font="@font/orbitron_regular"
+                    app:font="@font/orbitron_regular"/>
+              <font android:fontStyle="normal" android:fontWeight="700"
+                    android:font="@font/orbitron_bold"
+                    app:font="@font/orbitron_bold"/>
+          </font-family>
+          EOF
+
+          # --------------------
+          # Rajdhani font family
+          # --------------------
+          cat <<EOF > rajdhani.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <font-family xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto">
+              <font android:fontStyle="normal" android:fontWeight="300"
+                    android:font="@font/rajdhani_light"
+                    app:font="@font/rajdhani_light"/>
+              <font android:fontStyle="normal" android:fontWeight="400"
+                    android:font="@font/rajdhani_regular"
+                    app:font="@font/rajdhani_regular"/>
+              <font android:fontStyle="normal" android:fontWeight="500"
+                    android:font="@font/rajdhani_medium"
+                    app:font="@font/rajdhani_medium"/>
+          </font-family>
+          EOF
+
           echo "⬇️ Downloading font files..."
+
+          # Cinzel
           curl -s -L -o cinzel_regular.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Regular.ttf"
           curl -s -L -o cinzel_bold.ttf "https://raw.githubusercontent.com/georgiau/cinzel/main/fonts/ttf/Cinzel-Bold.ttf"
+
+          # Orbitron — FIXED (разделено в отдельные строки)
           curl -s -L -o orbitron_regular.ttf "https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Regular.ttf"
           curl -s -L -o orbitron_bold.ttf "https://raw.githubusercontent.com/theleagueof/orbitron/master/fonts/ttf/Orbitron-Bold.ttf"
+
+          # Rajdhani
           curl -s -L -o rajdhani_light.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Light.ttf"
           curl -s -L -o rajdhani_regular.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Regular.ttf"
           curl -s -L -o rajdhani_medium.ttf "https://raw.githubusercontent.com/IndianTypeFoundry/Rajdhani/master/fonts/ttf/Rajdhani-Medium.ttf"
-          
-          echo "✅ Fonts ready"
+
+          echo "📦 Checking downloaded fonts:"
           ls -la
+
+          echo "✅ Fonts ready"
 
       - name: Build APK
         script: |
           echo "🔨 Building HERMES APK..."
-          echo "Features included:"
-          echo "• System Audio Capture"
-          echo "• Game Overlay"
-          echo "• Offline Speech Recognition"
-          echo "• PS Remote Play Detection"
-          echo "• 4 Translation Modes"
-          echo "• 3 Voice Types"
-          
           chmod +x ./gradlew
           ./gradlew clean assembleDebug \
             -PversionCode=$BUILD_NUMBER \
             -PversionName=$VERSION_NAME \
-            --stacktrace \
-            --no-daemon
+            --stacktrace --no-daemon
 
       - name: Check Result
         script: |
@@ -112,4 +117,4 @@ workflows:
           fi
 
     artifacts:
-      - app/build/outputs/apk/debug/*.apk
+      - app/build/outputs/**/*.apk
